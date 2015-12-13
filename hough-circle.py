@@ -1,6 +1,27 @@
+import os
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+
+#img_path = 'images/12.pgm'
+img_dir = 'images'
+adaptiveClipLimit = 30.0
+adaptiveTileGridSize = (40,40)
+thresholdLimit = 80
+blur_aperture = 15
+
+# Hough Variables
+min_dist = 10
+param1 = 40
+param2 = 50
+min_radius = 3
+max_radius = 100
+
+def main():
+    #count_circles(img_path, True)
+    for file in os.listdir(img_dir):
+        if file.endswith('.pgm'):
+            count_circles(os.path.join(img_dir, file))
 
 def equalize_img_hist(img, adaptiveClipLimit, adaptiveTileGridSize):
     #Convert to BW
@@ -18,49 +39,41 @@ def blur_img(img, aperture):
 
     return img_blur
 
-img_path = 'images/12.pgm'
-adaptiveClipLimit = 30.0
-adaptiveTileGridSize = (40,40)
-thresholdLimit = 80
-blur_aperture = 15
+def count_circles(img_path, display_image = False):
+    # Read image
+    img = cv2.imread(img_path)
+    output = img.copy()
 
-# Hough Variables
-min_dist = 10
-param1 = 40
-param2 = 50
-min_radius = 3
-max_radius = 100
+    # Filter image to get better edge detection results
+    img_adaptHist = equalize_img_hist(img, adaptiveClipLimit, adaptiveTileGridSize)
+    th2, im_th2 = cv2.threshold(img_adaptHist, thresholdLimit, 255, cv2.THRESH_BINARY_INV)
+    img_blur = blur_img(im_th2, blur_aperture)
 
-# Read image
-img = cv2.imread(img_path)
-output = img.copy()
+    # Find circles via Hough transform
+    circles = cv2.HoughCircles(img_blur, cv2.cv.CV_HOUGH_GRADIENT, 2, min_dist, np.array([]), param1, param2, min_radius, max_radius)
 
-# Filter image to get better edge detection results
-img_adaptHist = equalize_img_hist(img, adaptiveClipLimit, adaptiveTileGridSize)
-th2, im_th2 = cv2.threshold(img_adaptHist, thresholdLimit, 255, cv2.THRESH_BINARY_INV)
-img_blur = blur_img(im_th2, blur_aperture)
+    # Add circles to output image
+    if circles is not None:
+        circles = np.round(circles[0, :]).astype("int")
 
-# Find circles via Hough transform
-circles = cv2.HoughCircles(img_blur, cv2.cv.CV_HOUGH_GRADIENT, 2, min_dist, np.array([]), param1, param2, min_radius, max_radius)
+        for (x, y, r) in circles:
+            cv2.circle(output, (x,y), r, (0, 255, 0), 4)
+            cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
-# Add circles to output image
-if circles is not None:
-    circles = np.round(circles[0, :]).astype("int")
+        print "Circles found: ", len(circles)
 
-    for (x, y, r) in circles:
-        cv2.circle(output, (x,y), r, (0, 255, 0), 4)
-        cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+    if display_image:
+        # Result Display
+        plt.subplot(221),plt.imshow(img,cmap = 'gray')
+        plt.title('Original Image'), plt.xticks([]), plt.yticks([])
+        plt.subplot(222),plt.imshow(img_adaptHist,cmap = 'gray')
+        plt.title('Equalized Image'), plt.xticks([]), plt.yticks([])
+        plt.subplot(223),plt.imshow(im_th2,cmap = 'gray')
+        plt.title('Threshold'), plt.xticks([]), plt.yticks([])
+        plt.subplot(224),plt.imshow(output,cmap = 'gray')
+        plt.title('Circles'), plt.xticks([]), plt.yticks([])
 
-    print "Circles found: ", len(circles)
+        plt.show()
 
-# Result Display
-plt.subplot(221),plt.imshow(img,cmap = 'gray')
-plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-plt.subplot(222),plt.imshow(img_adaptHist,cmap = 'gray')
-plt.title('Equalized Image'), plt.xticks([]), plt.yticks([])
-plt.subplot(223),plt.imshow(im_th2,cmap = 'gray')
-plt.title('Threshold'), plt.xticks([]), plt.yticks([])
-plt.subplot(224),plt.imshow(output,cmap = 'gray')
-plt.title('Circles'), plt.xticks([]), plt.yticks([])
-
-plt.show()
+if __name__ == "__main__":
+    main()
