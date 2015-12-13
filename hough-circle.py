@@ -51,6 +51,8 @@ if circles is not None:
         cv2.circle(output, (x,y), r, (0, 255, 0), 4)
         cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
+    print "Circles found: ", len(circles)
+
 # Result Display
 plt.subplot(221),plt.imshow(img,cmap = 'gray')
 plt.title('Original Image'), plt.xticks([]), plt.yticks([])
